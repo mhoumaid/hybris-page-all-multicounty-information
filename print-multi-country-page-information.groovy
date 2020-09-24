@@ -36,31 +36,42 @@ contentSlotData.each {
 }
 
 
-void printPage(sourcePage)
-{
+void printPage(sourcePage) {
   println "* Page Name                       : " + sourcePage.getName()
   println "* Page Uid                        : " + sourcePage.getUid()
   println "* Catalog Version                 : " + sourcePage.getCatalogVersion().getCatalog().getId() + ":" + sourcePage.getCatalogVersion().getVersion()
-  println "* Master Template                 : " + sourcePage.getMasterTemplate().getUid()
-  println "* Master Template Catalog Version : " + sourcePage.getMasterTemplate().getCatalogVersion().getCatalog().getId() + ":" +  sourcePage.getMasterTemplate().getCatalogVersion().getVersion()
+  println "* Master Template Name            : " + sourcePage.getMasterTemplate().getName()
+  println "* Master Template ID              : " + sourcePage.getMasterTemplate().getUid()
+  println "* Master Template Catalog Version : " + sourcePage.getMasterTemplate().getCatalogVersion().getCatalog().getId() + ":" + sourcePage.getMasterTemplate().getCatalogVersion().getVersion()
 }
 
 void printSlot(slot) {
-  println "_______________________________________________________________________________________"
-  println "* Name           : " + slot.getName()
-  println "* UID            : " + slot.getUid()
-  println "* isFromMaster   : " + slot.isFromMaster()
-  println "* isOriginalSlot : " + slot.isOverrideSlot()
-  println "* Position       : " + slot.getPosition()
-  println "* Components     : "
-  printComponents(slot)
+  println "___________________________________________________________________________"
+  println "* Section         : " + slot.getName()
+  println "* UID             : " + slot.getUid()
+  println "* Position        : " + slot.getPosition()
+  println "* Catalog Version : " + slot.getContentSlot().getCatalogVersion().getCatalog().getId() + ":" + slot.getContentSlot().getCatalogVersion().getVersion()
+  println "* isFromMaster    : " + slot.isFromMaster()
+  println "* isOriginalSlot  : " + slot.isOverrideSlot()
+  println "* Components      : "
+  printComponents(slot, slot.getContentSlot().getCatalogVersion())
 }
 
-void printComponents(slot) {
-  slot.getCMSComponents().eachWithIndex {it, index ->
-    println "     " + (index+1) + ". " + it.getName()
-    println "            * Uid               : " + it.getUid()
-    println "            * Catalogue Version : " + it.getCatalogVersion().getCatalog().getId() + ":" + it.getCatalogVersion().getVersion()
+void printComponents(slot, catalogVersion) {
+  def size = slot.getCMSComponents().size();
+  slot.getCMSComponents().eachWithIndex { it, index ->
+    println "     |"
+    println "     |____" + (index + 1) + ". " + it.getName()
+    println "     " + (index != size - 1 ? "|" : "") + "        * Uid               : " + it.getUid()
+    println "     " + (index != size - 1 ? "|" : "") + "        * Catalogue Version : " + it.getCatalogVersion().getCatalog().getId() + ":" + it.getCatalogVersion().getVersion()
+    if(catalogVersion.getPk() != it.getCatalogVersion().getPk())
+    {
+      println "     " + (index != size - 1 ? "|" : "") + "        * STATUS            : NOK -> Catalog version problem"
+    }
+    else
+    {
+      println "     " + (index != size - 1 ? "|" : "") + "        * STATUS            : OK"
+    }
   }
 }
 
@@ -70,23 +81,21 @@ public Collection<ContentSlotData> getContentSlotsForPage(AbstractPageModel page
   return this.getAllContentSlotsForPageAndSlots(page, pageSlots, templateSlots);
 }
 
-# Method override only for this reason, to set IsOverrideSlot, which means, that the slot, has an originalSlot 
 protected Collection<ContentSlotData> getAllContentSlotsForPageAndSlots(AbstractPageModel page, Collection<ContentSlotForPageModel> pageSlots, Collection<ContentSlotForTemplateModel> templateSlots) {
-  List<String> positions = (List)pageSlots.stream().filter{o -> o != null}.map{slot -> slot.getPosition()}.collect(Collectors.toList());
+  List<String> positions = (List) pageSlots.stream().filter { o -> o != null }.map { slot -> slot.getPosition() }.collect(Collectors.toList());
 
-  List<ContentSlotData> results = (List)pageSlots.stream().filter{o -> o != null}.map{pageSlotModel ->
+  List<ContentSlotData> results = (List) pageSlots.stream().filter { o -> o != null }.map { pageSlotModel ->
     return cmsPageService.getCmsDataFactory().createContentSlotData(pageSlotModel);
   }.collect(Collectors.toList());
   List<ContentSlotModel> addedTemplateSlots = cmsPageService.appendContentSlots(results, positions, templateSlots, page);
   List<CatalogVersionModel> catalogVersions = new ArrayList(cmsPageService.getCatalogVersionService().getSessionCatalogVersions());
   List<ContentSlotModel> contentSlots = cmsPageService.getSortedMultiCountryContentSlots(addedTemplateSlots, catalogVersions);
 
-  for(int i = 0; i < results.size(); ++i) {
-    ContentSlotData slotData = (ContentSlotData)results.get(i);
+  for (int i = 0; i < results.size(); ++i) {
+    ContentSlotData slotData = (ContentSlotData) results.get(i);
     Optional<ContentSlotModel> overrideSlotOptional = cmsPageService.getOverrideSlot(contentSlots, slotData.getContentSlot());
     if (overrideSlotOptional.isPresent()) {
       ContentSlotData data = cmsPageService.getCmsDataFactory().createContentSlotData(slotData.getPageId(), (ContentSlotModel) overrideSlotOptional.get(), slotData.getPosition(), slotData.isFromMaster(), slotData.isAllowOverwrite())
-      # Method override only for this reason, to set IsOverrideSlot, which means, that the slot, has an originalSlot 
       data.setIsOverrideSlot(true)
       results.set(i, data);
     }
