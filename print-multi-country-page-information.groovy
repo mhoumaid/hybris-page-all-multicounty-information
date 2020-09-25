@@ -17,13 +17,14 @@ GLOBAL_CATALOG = "myGlobalCatalogUid"
 
 VERSION = "Online"
 SOURCE_PAGE = "homepage"
+
 CMSPageService cmsPageService = spring.getBean("defaultCMSPageService");
 CatalogVersionService catalogVersionService = spring.getBean("catalogVersionService")
 
 def globalContentCatalog = catalogVersionService.getCatalogVersion(GLOBAL_CATALOG, VERSION)
 def localContentCatalog = catalogVersionService.getCatalogVersion(LOCAL_CATALOG, VERSION)
 
-# Add catalogs to session
+// Add catalogs to session
 catalogVersionService.addSessionCatalogVersion(globalContentCatalog)
 catalogVersionService.addSessionCatalogVersion(localContentCatalog)
 
@@ -31,9 +32,7 @@ AbstractPageModel sourcePage = cmsAdminPageService.getPageForId(SOURCE_PAGE, Col
 Collection<ContentSlotData> contentSlotData = getContentSlotsForPage(sourcePage);
 
 printPage(sourcePage)
-contentSlotData.each {
-  printSlot(it)
-}
+
 
 
 void printPage(sourcePage) {
@@ -43,6 +42,10 @@ void printPage(sourcePage) {
   println "* Master Template Name            : " + sourcePage.getMasterTemplate().getName()
   println "* Master Template ID              : " + sourcePage.getMasterTemplate().getUid()
   println "* Master Template Catalog Version : " + sourcePage.getMasterTemplate().getCatalogVersion().getCatalog().getId() + ":" + sourcePage.getMasterTemplate().getCatalogVersion().getVersion()
+  Collection<ContentSlotData> contentSlotData = getContentSlotsForPage(sourcePage);
+  contentSlotData.each {
+    printSlot(it)
+  }
 }
 
 void printSlot(slot) {
@@ -81,6 +84,7 @@ public Collection<ContentSlotData> getContentSlotsForPage(AbstractPageModel page
   return this.getAllContentSlotsForPageAndSlots(page, pageSlots, templateSlots);
 }
 
+// This method is overrided only to update IsOverrideSlot information, which is always false, in default cmsPageService.getAllContentSlotsForPageAndSlots(...)
 protected Collection<ContentSlotData> getAllContentSlotsForPageAndSlots(AbstractPageModel page, Collection<ContentSlotForPageModel> pageSlots, Collection<ContentSlotForTemplateModel> templateSlots) {
   List<String> positions = (List) pageSlots.stream().filter { o -> o != null }.map { slot -> slot.getPosition() }.collect(Collectors.toList());
 
